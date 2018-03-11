@@ -18,7 +18,7 @@ flags.DEFINE_string('data_dir', '/work/cse496dl/cpack/Assignment_3/dataset/', 'd
 flags.DEFINE_string('save_dir', '/work/cse496dl/cpack/Assignment_3/models/1', 'directory where VAE model graph and weights are saved')
 flags.DEFINE_integer('batch_size', 500, '')
 flags.DEFINE_integer('latent_size', 32, '')
-flags.DEFINE_integer('early_stop', 11, '')
+flags.DEFINE_integer('early_stop', 15, '')
 FLAGS = flags.FLAGS
 
 #############
@@ -37,8 +37,12 @@ train_data = np.reshape(train_data,(50000, 3, 32, 32)).transpose(0,2,3,1).astype
 test_data = np.reshape(test_data,(10000, 3, 32, 32)).transpose(0,2,3,1).astype(float)
 # Normalization: Input image should be normalized to have 0 mean and unit variation for the VAE.
 for i in range(50000):
-    train_data[i] = train_data[i]-np.mean(train_data[i])
-    train_data[i] = train_data[i]/np.std(train_data[i])
+    #train_data[i] = train_data[i]-np.mean(train_data[i])
+    #train_data[i] = train_data[i]/np.std(train_data[i])
+    train_data[i] = train_data[i]/255.0
+
+for i in range(10000):
+    test_data[i] = test_data[i]/255.0
 
 ################
 # VAE Modeling #
@@ -69,11 +73,11 @@ stop_tol = 0
 # setup optimizer
 with tf.name_scope('optimizer') as scope:
 	#rate = tf.train.exponential_decay(0.15, step, 1, 0.001)
-    train_op = tf.train.AdamOptimizer(0.001).minimize(loss=total_loss, global_step=global_step_tensor)
+    train_op = tf.train.AdamOptimizer(0.0005).minimize(loss=total_loss, global_step=global_step_tensor)
 
 with tf.Session() as sess:
 	sess.run(tf.global_variables_initializer())
-	for epoch in range(10):
+	for epoch in range(30):
 	    print("epoch... ", epoch)
 	    for i in range(train_data.shape[0] // FLAGS.batch_size):
 	        batch_xs = train_data[i*FLAGS.batch_size:(i+1)*FLAGS.batch_size, :]
