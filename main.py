@@ -49,6 +49,7 @@ inputs = tf.placeholder(tf.float32, shape=[None] + img_shape, name='encoder_inpu
 ## ENCODER
 means, log_scales = model.gaussian_encoder(inputs, FLAGS.latent_size)  # (?, 4, 4, 8)
 codes = model.gaussian_sample(means, log_scales)                 # (?, 4, 4, 8)
+tf.identity(codes,name='encoder_output')
 ## DECODER
 outputs = model.decoder(codes, name='decoder_output')
 

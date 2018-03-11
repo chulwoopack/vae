@@ -24,6 +24,7 @@ def upscale_block(x, scale=2):
     return output
 
 def decoder(codes, name):
+    tf.identity(codes,name='decoder_input')
     hidden_decoder = tf.layers.dense(codes,  4*4*3)     # (?,  4x4x8)
     decoder_4 = tf.reshape(hidden_decoder, [-1,4,4,3])  # (?,  4,  4, 16)
     decoder_8 = upscale_block(decoder_4)                # (?,  8,  8,  8)
