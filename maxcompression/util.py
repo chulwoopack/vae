@@ -1,4 +1,4 @@
-# Author: Chulwoo Pack
+# Author: Chulwoo Pack, Michael Shanahan, M Parvez Rashid
 # Credits: Paul Quint
 import tensorflow as tf
 import numpy as np
@@ -7,26 +7,42 @@ import math
 
 EPS = 1e-10
 
-#imports data
 def unpickle(file):
     import pickle
     with open(file, 'rb') as fo:
         dict = pickle.load(fo, encoding='bytes')
     return dict
     
+def flatten(inputs):
+    """
+    Flattens a tensor along all non-batch dimensions.
+    This is correctly a NOP if the input is already flat.
+    """
+    if len(np.shape(inputs)) == 2:
+        return inputs
+    else:
+        size = inputs.get_shape().as_list()[1:]
+        return [-1, size]
+    
+    
 def std_gaussian_KL_divergence(mu, log_sigma):
     """Analytic KL distance between N(mu, e^log_sigma) and N(0, 1)"""
-    sigma = tf.exp(log_sigma)
-    return -0.5 * tf.reduce_sum(
-        1 + tf.log(tf.square(sigma)) - tf.square(mu) - tf.square(sigma), 1)
+    #sigma = tf.exp(log_sigma)
+    #sigma = log_sigma
+    #return -0.5 * tf.reduce_sum(1 + tf.log(tf.square(sigma)) - tf.square(mu) - tf.square(sigma), 1)
+    return tf.reduce_sum(-0.5 * tf.reduce_sum(1 + tf.clip_by_value(log_sigma, -1/255.0, 1/255.0) - tf.square(tf.clip_by_value(mu, -1/255.0, 1/255.0)) - tf.exp(tf.clip_by_value(log_sigma, -1/255.0, 1/255.0)), 1))
+
+
 
 def bernoulli_logp(new_image, orig_image): #(output, input)
     """Calculates log prob of sample under bernoulli distribution.
     
     Note: args must be in range [0,1]
     """
-    vae_loss_likelihood = tf.reduce_sum(orig_image * tf.log(EPS + new_image) +
-                         ((1 - orig_image) * tf.log(EPS + 1 - new_image)), 1)
+    new_image = tf.reshape(new_image, [-1, 3072])
+    orig_image = tf.reshape(orig_image, [-1, 3072])
+    new_image = tf.nn.relu(new_image)
+    vae_loss_likelihood = tf.reduce_sum(orig_image * tf.log(EPS + tf.sigmoid(new_image)) + (1 - orig_image) * tf.log(EPS + 1 - tf.sigmoid(new_image)),1)
     return vae_loss_likelihood
 
 def discretized_logistic_logp(mean, logscale, sample, binsize=1 / 256.0):
@@ -58,18 +74,20 @@ def vae_loss(inputs, outputs, latent_mean, latent_log_scale, output_dist, output
     # Calculate reconstruction loss
     # Equal to minus the log likelihood of the input data under the VAE's output distribution
     if output_dist == 'bernoulli':
-        outputs = tf.sigmoid(outputs)
-        reconstruction_loss = -bernoulli_logp(outputs, inputs)
+        outputs = tf.clip_by_value(outputs, 0.1, 255.)
+        reconstruction_loss = tf.reduce_mean(tf.square(inputs-outputs))
+        #reconstruction_loss = -bernoulli_logp(outputs, inputs)
+        
     elif output_dist == 'logistic':
         outputs = tf.clip_by_value(outputs, 1 / 512., 1 - 1 / 512.)
         reconstruction_loss = -discretized_logistic_logp(outputs, output_log_scale, inputs)
     else:
         print('Must specify an argument for output_dist in [bernoulli, logistic]')
-    reconstruction_loss = tf.reduce_mean(reconstruction_loss)
+    #reconstruction_loss = tf.reduce_mean(reconstruction_loss)
         
     # Calculate latent loss
     latent_loss = std_gaussian_KL_divergence(latent_mean, latent_log_scale)
-    latent_loss = tf.reduce_mean(latent_loss)
+    #latent_loss = tf.reduce_mean(latent_loss)
     
     return reconstruction_loss, latent_loss
 

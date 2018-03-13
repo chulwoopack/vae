@@ -4,7 +4,7 @@
 #SBATCH --job-name=VAE_CIFAR100
 #SBATCH --partition=gpu
 #SBATCH --reservation=cse496dl
-#SBATCH --gres=gpu:6
+#SBATCH --gres=gpu:2
 #SBATCH --constraint=[gpu_k20|gpu_k40|gpu_p100]
 #SBATCH --error=/work/cse496dl/cpack/Assignment_3/job.err
 #SBATCH --output=/work/cse496dl/cpack/Assignment_3/job.out
